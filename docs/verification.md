@@ -14,3 +14,9 @@
 في الموقع المنشور ظهر Canvas والافتار Nova، ثم فُتحت الإعدادات واختُبرت عملية التبديل إلى Sora. تغيرت الشخصية والاسم والإشارة من `A-01 / AMBER SIGNAL` إلى `M-07 / MINT SIGNAL` دون أخطاء ظاهرة.
 
 تم اختيار Atlas في الموقع المنشور ثم إعادة تحميل الصفحة. استُعيد Atlas تلقائيًا مع `C-12 / VIOLET SIGNAL`، ما يؤكد عمل localStorage على GitHub Pages. لم يظهر خطأ في واجهة الصفحة أو Canvas أثناء الاختبار.
+
+## Avatar archive integration — 2026-08-18
+
+تم العثور على مستودع `magen-gillan/Avatar`. يحتوي على أربع حزم صور WebP متتبعة (`aqua.webp`, `darkness.webp`, `wiz.webp`, `megumin.webp`) ولا يحتوي على ملفات VRM/GLB/Live2D فعلية. لذلك دُمجت الحزم كـ source model archive بصري مستقل، بينما بقيت الشخصيات الإجرائية هي طبقة 3D الفعلية داخل Canvas.
+
+أضيف معرض `SOURCE MODEL ARCHIVE / 004` وبطاقات Aqua وDarkness وWiz وMegumin، وبطاقة مصدر داخل المسرح، وخيار `MODEL PACKAGE` داخل الإعدادات، مع حفظ الاختيار في localStorage. اجتاز البناء وTypeScript. في المعاينة ظهرت البطاقات، وتم تبديل Aqua إلى Darkness بنجاح وتغيرت الصورة والاسم و`MODEL SOURCE`.

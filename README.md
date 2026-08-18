@@ -35,3 +35,9 @@ pnpm build
 [2]: https://github.com/pixiv/three-vrm "pixiv/three-vrm — MIT"
 [3]: https://github.com/M3-org/CharacterStudio "M3-org/CharacterStudio — MIT"
 [4]: https://opensourceavatars.com/ "Open Source Avatars — VRM/glTF collection and license notes"
+
+## حزم النماذج من Avatar
+
+أضيف معرض مستقل يربط أربع حزم صور من المستودع العام [`magen-gillan/Avatar`](https://github.com/magen-gillan/Avatar): Aqua وDarkness وWiz وMegumin. لم يظهر ملف ترخيص معروف في بيانات GitHub للمستودع، لذلك بقيت الأصول مراجع بعيدة منسوبة للنموذج الأولي ولم تُنسخ إلى حزمة الإنتاج. يجب الحصول على إذن صريح أو استبدالها بأصول مرخصة قبل أي إصدار تجاري.
+
+المسرح الحالي يستمر في عرض شخصيات ثلاثية الأبعاد إجرائية خفيفة. حزم Avatar هي مراجع بصرية قابلة للتبديل ومحفوظة محليًا عبر `alish02-model`، وليست نماذج VRM أو Live2D runtime بعد.

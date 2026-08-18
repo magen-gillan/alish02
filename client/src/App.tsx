@@ -21,6 +21,7 @@ import {
   Settings2,
   Sparkles,
   Sun,
+  Layers3,
   X,
 } from "lucide-react";
 import "./index.css";
@@ -38,6 +39,25 @@ type AvatarDefinition = {
   accent: string;
   badge: string;
 };
+
+const MODEL_ASSET_BASE = "https://raw.githubusercontent.com/magen-gillan/Avatar/main/client/public/avatar-assets";
+
+type ModelPackage = {
+  id: string;
+  name: string;
+  source: string;
+  category: string;
+  image: string;
+  palette: string;
+  description: string;
+};
+
+const modelPackages: ModelPackage[] = [
+  { id: "aqua-fantasy", name: "Aqua", source: "101 / Aqua", category: "Fantasy Fes", image: `${MODEL_ASSET_BASE}/aqua.webp`, palette: "#92b8ec", description: "Blue-haired texture package from the Avatar archive." },
+  { id: "darkness-fantasy", name: "Darkness", source: "103 / Darkness", category: "Fantasy Fes", image: `${MODEL_ASSET_BASE}/darkness.webp`, palette: "#d8a05d", description: "Warm gold and ink-black texture package." },
+  { id: "wiz-archive", name: "Wiz", source: "105 / Wiz", category: "Archive", image: `${MODEL_ASSET_BASE}/wiz.webp`, palette: "#a99ad4", description: "Violet archive package for a quieter presence." },
+  { id: "megumin-collab", name: "Megumin", source: "102 / Megumin", category: "Collab", image: `${MODEL_ASSET_BASE}/megumin.webp`, palette: "#e45b4c", description: "Red-accented collaboration package from Avatar." },
+];
 
 const avatars: AvatarDefinition[] = [
   {
@@ -85,6 +105,16 @@ function readStoredAvatar(): AvatarId {
     return avatars.some((avatar) => avatar.id === value) ? (value as AvatarId) : "nova";
   } catch {
     return "nova";
+  }
+}
+
+function readStoredModel(): string {
+  if (typeof window === "undefined") return modelPackages[0].id;
+  try {
+    const value = window.localStorage.getItem("alish02-model");
+    return modelPackages.some((model) => model.id === value) ? value! : modelPackages[0].id;
+  } catch {
+    return modelPackages[0].id;
   }
 }
 
@@ -195,9 +225,11 @@ function AvatarStage({ avatar, motion }: { avatar: AvatarDefinition; motion: boo
 function App() {
   const [activeId, setActiveId] = useState<AvatarId>(readStoredAvatar);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [modelId, setModelId] = useState(readStoredModel);
   const [motion, setMotion] = useState(readStoredMotion);
   const [dark, setDark] = useState(true);
   const active = useMemo(() => avatars.find((avatar) => avatar.id === activeId) ?? avatars[0], [activeId]);
+  const selectedModel = useMemo(() => modelPackages.find((model) => model.id === modelId) ?? modelPackages[0], [modelId]);
   const activeIndex = avatars.findIndex((avatar) => avatar.id === active.id);
   const pagesBase = import.meta.env.BASE_URL;
   const markSrc = pagesBase === "/" ? "/manus-storage/alish02-mark_82607bd3.png" : `${pagesBase}alish02-mark.svg`;
@@ -210,6 +242,13 @@ function App() {
       // The UI remains usable when browser storage is disabled.
     }
   }, [activeId]);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("alish02-model", modelId);
+    } catch {
+      // Model selection remains usable in memory when storage is unavailable.
+    }
+  }, [modelId]);
   useEffect(() => {
     try {
       window.localStorage.setItem("alish02-motion", motion ? "on" : "off");
@@ -262,18 +301,18 @@ function App() {
           <div className="stage-grid">
             <div className="stage-wrap">
               <div className="stage-meta"><span><Aperture size={14} /> STAGE / {active.signal}</span><span className="mono">{active.badge} SIGNAL</span></div>
-              <div className="stage" style={{ backgroundImage: `linear-gradient(180deg, rgba(23,22,21,.12), rgba(23,22,21,.58)), url('${stageBackground}')` }}><AvatarStage avatar={active} motion={motion} /><div className="status-rail"><span className="status-ready"><i /> READY</span><span>LOADING</span><span>ERROR</span></div><div className="stage-corner top-left" /><div className="stage-corner bottom-right" /><div className="stage-coordinate">x 04° 18' 09" / y 52° 31' 22"</div></div>
+              <div className="stage" style={{ backgroundImage: `linear-gradient(180deg, rgba(23,22,21,.12), rgba(23,22,21,.58)), url('${stageBackground}')` }}><AvatarStage avatar={active} motion={motion} /><div className="model-source-card"><img src={selectedModel.image} alt={`${selectedModel.name} model package`} /><div><span className="eyebrow">SOURCE PACKAGE</span><strong>{selectedModel.name}</strong><small>{selectedModel.category} · {selectedModel.source}</small></div></div><div className="status-rail"><span className="status-ready"><i /> READY</span><span>LOADING</span><span>ERROR</span></div><div className="stage-corner top-left" /><div className="stage-corner bottom-right" /><div className="stage-coordinate">x 04° 18' 09" / y 52° 31' 22"</div></div>
               <div className="stage-controls"><button onClick={() => changeAvatar(-1)} aria-label="الافتار السابق"><ChevronLeft size={18} /></button><div><span className="mono">0{activeIndex + 1} / 0{avatars.length}</span><strong>{active.name}</strong></div><button onClick={() => changeAvatar(1)} aria-label="الافتار التالي"><ChevronRight size={18} /></button></div>
             </div>
 
-            <aside className="info-panel"><div className="panel-kicker"><span className="signal-line" /> CURRENT SUBJECT <span className="status-chip"><i /> READY</span></div><div className="subject-name"><span>{active.signal}</span><h2>{active.name}</h2><p>{active.role}</p></div><p className="descriptor">{active.descriptor}</p><div className="stats"><div><span>FORMAT</span><strong>PROCEDURAL 3D</strong></div><div><span>LICENSE</span><strong>MIT / CC0 SAFE</strong></div><div><span>STATUS</span><strong className="ready"><Check size={13} /> RENDERING</strong></div></div><button className="switch-button" onClick={() => setSettingsOpen(true)}>Configure presence <ArrowUpRight size={16} /></button><div className="panel-footer"><Gauge size={14} /> 60 FPS TARGET <span>·</span> WEBGL 2</div></aside>
+            <aside className="info-panel"><div className="panel-kicker"><span className="signal-line" /> CURRENT SUBJECT <span className="status-chip"><i /> READY</span></div><div className="subject-name"><span>{active.signal}</span><h2>{active.name}</h2><p>{active.role}</p></div><p className="descriptor">{active.descriptor}</p><div className="stats"><div><span>FORMAT</span><strong>PROCEDURAL 3D</strong></div><div><span>MODEL SOURCE</span><strong>{selectedModel.name.toUpperCase()}</strong></div><div><span>LICENSE</span><strong>SEE SOURCE REPO</strong></div><div><span>STATUS</span><strong className="ready"><Check size={13} /> RENDERING</strong></div></div><button className="switch-button" onClick={() => setSettingsOpen(true)}>Configure presence <ArrowUpRight size={16} /></button><div className="panel-footer"><Gauge size={14} /> 60 FPS TARGET <span>·</span> WEBGL 2</div></aside>
           </div>
 
-          <div className="collection-strip"><div className="strip-title"><span className="eyebrow">COLLECTION INDEX / 003</span><strong>Three ways to arrive.</strong><div className="archive-ticks"><i /><i /><i /><i /><i /><i /><i /></div></div><div className="avatar-tabs">{avatars.map((avatar) => <button key={avatar.id} className={avatar.id === active.id ? "avatar-tab active" : "avatar-tab"} onClick={() => setActiveId(avatar.id)}><span className="tab-number">{avatar.signal}</span><span><strong>{avatar.name}</strong><small>{avatar.role}</small></span><span className="tab-swatch" style={{ background: avatar.accent }} /></button>)}</div></div>
+          <div className="collection-strip"><div className="strip-title"><span className="eyebrow">COLLECTION INDEX / 003</span><strong>Three ways to arrive.</strong><div className="archive-ticks"><i /><i /><i /><i /><i /><i /><i /></div></div><div className="avatar-tabs">{avatars.map((avatar) => <button key={avatar.id} className={avatar.id === active.id ? "avatar-tab active" : "avatar-tab"} onClick={() => setActiveId(avatar.id)}><span className="tab-number">{avatar.signal}</span><span><strong>{avatar.name}</strong><small>{avatar.role}</small></span><span className="tab-swatch" style={{ background: avatar.accent }} /></button>)}</div></div><div className="model-archive"><div className="model-archive-head"><div><span className="eyebrow"><Layers3 size={12} /> SOURCE MODEL ARCHIVE / 004</span><strong>Packages from Avatar.</strong></div><span className="mono">IMAGE PACKS · REMOTE SOURCE</span></div><div className="model-tabs">{modelPackages.map((model) => <button key={model.id} className={model.id === selectedModel.id ? "model-tab active" : "model-tab"} onClick={() => setModelId(model.id)} aria-pressed={model.id === selectedModel.id}><img src={model.image} alt="" loading="lazy" decoding="async" /><span><strong>{model.name}</strong><small>{model.category} · {model.source}</small></span><i style={{ background: model.palette }} /></button>)}</div></div>
         </section>
       </div>
 
-      {settingsOpen && <div className="settings-backdrop" onClick={() => setSettingsOpen(false)}><aside className="settings-drawer" role="dialog" aria-modal="true" aria-labelledby="presence-settings-title" onClick={(event) => event.stopPropagation()}><div className="drawer-head"><div><span className="eyebrow">CONTROL ROOM</span><h2 id="presence-settings-title">Presence settings</h2></div><button className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="إغلاق الإعدادات"><X size={18} /></button></div><p className="drawer-copy">Your selection stays in this browser. Choose a subject, then return to the observatory.</p><div className="drawer-section"><span className="drawer-label">AVATAR SUBJECT</span>{avatars.map((avatar) => <button key={avatar.id} className={avatar.id === active.id ? "drawer-avatar selected" : "drawer-avatar"} onClick={() => setActiveId(avatar.id)}><span className="drawer-index">{avatar.signal}</span><span><strong>{avatar.name}</strong><small>{avatar.role}</small></span>{avatar.id === active.id && <Check size={16} />}</button>)}</div><div className="drawer-section"><span className="drawer-label">MOTION PROFILE</span><button className="toggle-row" onClick={() => setMotion((value) => !value)}><span><strong>Ambient movement</strong><small>Idle drift and auto-rotation</small></span><span className={motion ? "toggle on" : "toggle"}><i /></span></button></div><div className="drawer-section"><span className="drawer-label">SESSION</span><button className="reset-button" onClick={() => { setActiveId("nova"); setMotion(true); }}><RotateCcw size={15} /> Reset to Nova baseline</button></div><div className="drawer-note"><Sparkles size={15} /> VRM loading is the next expansion point. This build uses lightweight procedural characters so GitHub Pages remains fast and dependable.</div></aside></div>}
+      {settingsOpen && <div className="settings-backdrop" onClick={() => setSettingsOpen(false)}><aside className="settings-drawer" role="dialog" aria-modal="true" aria-labelledby="presence-settings-title" onClick={(event) => event.stopPropagation()}><div className="drawer-head"><div><span className="eyebrow">CONTROL ROOM</span><h2 id="presence-settings-title">Presence settings</h2></div><button className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="إغلاق الإعدادات"><X size={18} /></button></div><p className="drawer-copy">Your selection stays in this browser. Choose a subject, then return to the observatory.</p><div className="drawer-section"><span className="drawer-label">AVATAR SUBJECT</span>{avatars.map((avatar) => <button key={avatar.id} className={avatar.id === active.id ? "drawer-avatar selected" : "drawer-avatar"} onClick={() => setActiveId(avatar.id)}><span className="drawer-index">{avatar.signal}</span><span><strong>{avatar.name}</strong><small>{avatar.role}</small></span>{avatar.id === active.id && <Check size={16} />}</button>)}</div><div className="drawer-section"><span className="drawer-label">MODEL PACKAGE</span>{modelPackages.map((model) => <button key={model.id} className={model.id === selectedModel.id ? "drawer-avatar selected" : "drawer-avatar"} onClick={() => setModelId(model.id)}><img className="drawer-model-thumb" src={model.image} alt="" loading="lazy" decoding="async" /><span><strong>{model.name}</strong><small>{model.category} · {model.source}</small></span>{model.id === selectedModel.id && <Check size={16} />}</button>)}</div><div className="drawer-section"><span className="drawer-label">MOTION PROFILE</span><button className="toggle-row" onClick={() => setMotion((value) => !value)}><span><strong>Ambient movement</strong><small>Idle drift and auto-rotation</small></span><span className={motion ? "toggle on" : "toggle"}><i /></span></button></div><div className="drawer-section"><span className="drawer-label">SESSION</span><button className="reset-button" onClick={() => { setActiveId("nova"); setModelId(modelPackages[0].id); setMotion(true); }}><RotateCcw size={15} /> Reset to Nova baseline</button></div><div className="drawer-note"><Sparkles size={15} /> The procedural character is paired with a selectable source package from the public Avatar archive. VRM loading remains the next expansion point.</div></aside></div>}
     </main>
   );
 }
