@@ -20,3 +20,5 @@
 تم العثور على مستودع `magen-gillan/Avatar`. يحتوي على أربع حزم صور WebP متتبعة (`aqua.webp`, `darkness.webp`, `wiz.webp`, `megumin.webp`) ولا يحتوي على ملفات VRM/GLB/Live2D فعلية. لذلك دُمجت الحزم كـ source model archive بصري مستقل، بينما بقيت الشخصيات الإجرائية هي طبقة 3D الفعلية داخل Canvas.
 
 أضيف معرض `SOURCE MODEL ARCHIVE / 004` وبطاقات Aqua وDarkness وWiz وMegumin، وبطاقة مصدر داخل المسرح، وخيار `MODEL PACKAGE` داخل الإعدادات، مع حفظ الاختيار في localStorage. اجتاز البناء وTypeScript. في المعاينة ظهرت البطاقات، وتم تبديل Aqua إلى Darkness بنجاح وتغيرت الصورة والاسم و`MODEL SOURCE`.
+
+تم نشر الإصدار الجديد بنجاح عبر Workflow `32106509764`. في GitHub Pages ظهر معرض `SOURCE MODEL ARCHIVE / 004` وبطاقات الحزم الأربع. اختُبرت عملية التبديل من Aqua إلى Megumin على النسخة العامة، فتغيرت صورة بطاقة المصدر واسم الحزمة وقيمة `MODEL SOURCE` إلى `MEGUMIN`، وبقي Canvas وAtlas يعملان.
