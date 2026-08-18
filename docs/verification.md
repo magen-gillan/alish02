@@ -40,3 +40,7 @@
 بعد دمج `VisemeAnalyzer` ظهرت واجهة الصوت الجديدة بنجاح: `Speech is classified into smoothed visemes and mapped to 15 mouth cues, with RMS fallback for uncertain frames.` وظهرت حالة النموذج READY قبل فتح الإعدادات. لم يظهر خطأ runtime أثناء التحميل أو فتح اللوحة.
 
 في الاختبار الوظيفي، قُبل ملف `alish02-test-tone.wav`، ونجح زر `Play + sync lips` في تفعيل مسار الصوت دون ظهور أخطاء في console. تم إنشاء AudioContext وVisemeAnalyzer داخل gesture المستخدم، وتستمر تعبيرات الفم والحركات من داخل حلقة VRM.
+
+اختبار الرابط العام بعد النشر: HTML وJavaScript وملفات CSS من GitHub Pages تعيد HTTP 200. ملف Rose من Arweave يعيد HTTP 200 لكنه استغرق نحو 18 ثانية وظل runtime في حالة `LOADING` أثناء نافذة الاختبار؛ لا توجد أخطاء console. هذا يؤكد أن القيد الحالي هو زمن/موثوقية CDN الخارجي، وليس فشل Workflow أو TypeScript.
+
+تم إنشاء GitHub Release `v0.3.1` للأصول العامة `rose.vrm` و`robert.vrm` و`rabbit.vrm`، وتراوحت استجابة التنزيل المباشر بين 0.19 و0.29 ثانية في الفحص المحلي. سيستخدم GitHub Pages هذه الروابط العامة بدل Arweave لتقليل زمن بقاء المسرح في LOADING.
