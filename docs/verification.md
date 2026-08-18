@@ -36,3 +36,7 @@
 بعد اكتمال طلب Arweave الذي استغرق وقتًا أطول، انتقل Robert إلى `READY` وظهر كنموذج VRM فعلي داخل Canvas. طلب الشبكة كان HTTP 200 مع CORS مفتوح، ولم يظهر خطأ في console. التأخير ناتج عن حجم/زمن استجابة الملف البعيد، لذلك سيُضاف لاحقًا مؤشر تقدم وتحسين caching أو استضافة محلية مرخصة.
 
 اكتمل اختبار Rabbit: بعد اختيار VRM-059 من الإعدادات ظهرت حالة `LOADING` مؤقتًا، ثم انتقلت إلى `READY` وظهر النموذج الثالث داخل Canvas. بذلك نجحت دورة تبديل Rose وRobert وRabbit مع نماذج فعلية، وليس صورًا خامًا.
+
+بعد دمج `VisemeAnalyzer` ظهرت واجهة الصوت الجديدة بنجاح: `Speech is classified into smoothed visemes and mapped to 15 mouth cues, with RMS fallback for uncertain frames.` وظهرت حالة النموذج READY قبل فتح الإعدادات. لم يظهر خطأ runtime أثناء التحميل أو فتح اللوحة.
+
+في الاختبار الوظيفي، قُبل ملف `alish02-test-tone.wav`، ونجح زر `Play + sync lips` في تفعيل مسار الصوت دون ظهور أخطاء في console. تم إنشاء AudioContext وVisemeAnalyzer داخل gesture المستخدم، وتستمر تعبيرات الفم والحركات من داخل حلقة VRM.

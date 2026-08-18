@@ -7,6 +7,7 @@ import { ContactShadows, OrbitControls } from "@react-three/drei";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, type VRM } from "@pixiv/three-vrm";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { VisemeAnalyzer, type VisemeFrame } from "./lib/viseme-analyzer";
 import { MathUtils, type Group } from "three";
 import {
   Aperture,
@@ -112,7 +113,7 @@ function disposeVrm(vrm: VRM) {
   });
 }
 
-function VrmAvatar({ avatar, motion, mouthOpen, onStatus }: { avatar: VrmAvatarDefinition; motion: boolean; mouthOpen: React.MutableRefObject<number>; onStatus: (status: "loading" | "ready" | "error") => void }) {
+function VrmAvatar({ avatar, motion, mouthOpen, visemeRef, onStatus }: { avatar: VrmAvatarDefinition; motion: boolean; mouthOpen: React.MutableRefObject<number>; visemeRef: React.MutableRefObject<VisemeFrame>; onStatus: (status: "loading" | "ready" | "error") => void }) {
   const root = useRef<Group>(null);
   const vrmRef = useRef<VRM | null>(null);
 
@@ -154,17 +155,39 @@ function VrmAvatar({ avatar, motion, mouthOpen, onStatus }: { avatar: VrmAvatarD
     const vrm = vrmRef.current;
     if (!vrm || !root.current) return;
     vrm.update(delta);
-    const targetRotation = motion ? Math.sin(clock.elapsedTime * 0.38) * 0.11 : 0;
+    const time = clock.elapsedTime;
+    const targetRotation = motion ? Math.sin(time * 0.38) * 0.11 : 0;
     root.current.rotation.y = MathUtils.lerp(root.current.rotation.y, targetRotation, 0.045);
-    root.current.position.y = motion ? Math.sin(clock.elapsedTime * 1.15) * 0.035 : 0;
-    vrm.expressionManager?.setValue("aa", mouthOpen.current);
-    vrm.expressionManager?.setValue("oh", mouthOpen.current * 0.35);
+    root.current.position.y = motion ? Math.sin(time * 1.15) * 0.035 : 0;
+
+    const frame = visemeRef.current;
+    const intensity = frame.intensity;
+    const viseme = frame.viseme;
+    const expression = vrm.expressionManager;
+    if (expression) {
+      const blinkPhase = (time % 5.8) - 5.15;
+      const blink = blinkPhase > 0 ? Math.max(0, 1 - blinkPhase / 0.16) : 0;
+      expression.setValue("blink", blink);
+      expression.setValue("happy", viseme === "E" ? intensity * 0.24 : 0);
+      expression.setValue("aa", viseme === "aa" ? intensity : viseme === "PP" || viseme === "DD" ? intensity * 0.25 : intensity * 0.08);
+      expression.setValue("ih", viseme === "I" ? intensity * 0.82 : 0);
+      expression.setValue("ee", viseme === "E" ? intensity * 0.72 : 0);
+      expression.setValue("ou", viseme === "U" || viseme === "O" ? intensity * 0.82 : 0);
+      expression.setValue("oh", viseme === "O" ? intensity * 0.76 : intensity * 0.12);
+      expression.setValue("ff", viseme === "FF" ? intensity * 0.72 : 0);
+    }
+
+    const head = vrm.humanoid?.getNormalizedBoneNode("head");
+    if (head && motion) {
+      head.rotation.y = MathUtils.lerp(head.rotation.y, Math.sin(time * 0.55) * 0.055, 0.06);
+      head.rotation.x = MathUtils.lerp(head.rotation.x, Math.sin(time * 0.8) * 0.022, 0.06);
+    }
   });
 
   return <group ref={root} position={[0, -1.7, 0]} scale={2.55} />;
 }
 
-function VrmStage({ avatar, motion, mouthOpen, onStatus }: { avatar: VrmAvatarDefinition; motion: boolean; mouthOpen: React.MutableRefObject<number>; onStatus: (status: "loading" | "ready" | "error") => void }) {
+function VrmStage({ avatar, motion, mouthOpen, visemeRef, onStatus }: { avatar: VrmAvatarDefinition; motion: boolean; mouthOpen: React.MutableRefObject<number>; visemeRef: React.MutableRefObject<VisemeFrame>; onStatus: (status: "loading" | "ready" | "error") => void }) {
   return (
     <Canvas shadows dpr={[1, 1.65]} camera={{ position: [0, 0.15, 7.4], fov: 39 }} gl={{ antialias: true, powerPreference: "high-performance" }}>
       <color attach="background" args={["#171615"]} />
@@ -172,7 +195,7 @@ function VrmStage({ avatar, motion, mouthOpen, onStatus }: { avatar: VrmAvatarDe
       <directionalLight position={[3, 5, 4]} intensity={3.2} color="#fff0d2" castShadow />
       <pointLight position={[-3, 2, 2]} intensity={3.5} color={avatar.accent} distance={7} />
       <pointLight position={[3, 0, -2]} intensity={2} color="#a8b6ff" distance={5} />
-      <VrmAvatar avatar={avatar} motion={motion} mouthOpen={mouthOpen} onStatus={onStatus} />
+      <VrmAvatar avatar={avatar} motion={motion} mouthOpen={mouthOpen} visemeRef={visemeRef} onStatus={onStatus} />
       <ContactShadows position={[0, -2.36, 0]} opacity={0.48} scale={4.2} blur={2.4} far={4} color="#000000" />
       <OrbitControls enablePan={false} enableZoom={false} minPolarAngle={Math.PI / 2.2} maxPolarAngle={Math.PI / 1.9} autoRotate={motion} autoRotateSpeed={0.38} />
     </Canvas>
@@ -188,8 +211,10 @@ function App() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioName, setAudioName] = useState("No voice clip loaded");
   const mouthOpen = useRef(0);
+  const visemeRef = useRef<VisemeFrame>({ viseme: "sil", intensity: 0, confidence: 0, amplitude: 0, bands: { sub: 0, low: 0, mid: 0, high: 0, veryHigh: 0 } });
   const audioRef = useRef<HTMLAudioElement>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const visemeAnalyzerRef = useRef<VisemeAnalyzer | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const selected = useMemo(() => vrmAvatars.find((avatar) => avatar.id === selectedId) ?? vrmAvatars[0], [selectedId]);
@@ -219,17 +244,16 @@ function App() {
     const sample = () => {
       const analyser = analyserRef.current;
       if (analyser) {
-        const values = new Uint8Array(analyser.fftSize);
-        analyser.getByteTimeDomainData(values);
-        let sum = 0;
-        for (let index = 0; index < values.length; index += 1) {
-          const normalized = (values[index] - 128) / 128;
-          sum += normalized * normalized;
+        if (!visemeAnalyzerRef.current && audioContextRef.current) visemeAnalyzerRef.current = new VisemeAnalyzer(analyser, audioContextRef.current.sampleRate);
+        if (visemeAnalyzerRef.current) {
+          const frame = visemeAnalyzerRef.current.analyze();
+          visemeRef.current = frame;
+          mouthOpen.current = frame.intensity;
         }
-        const rms = Math.sqrt(sum / values.length);
-        mouthOpen.current = Math.min(1, Math.max(0, (rms - 0.018) * 8.5));
       } else {
         mouthOpen.current = 0;
+        visemeRef.current = { viseme: "sil", intensity: 0, confidence: 0, amplitude: 0, bands: { sub: 0, low: 0, mid: 0, high: 0, veryHigh: 0 } };
+        visemeAnalyzerRef.current?.reset();
       }
       raf = requestAnimationFrame(sample);
     };
@@ -285,6 +309,7 @@ function App() {
       audioContextRef.current = context;
       sourceRef.current = source;
       analyserRef.current = analyser;
+      visemeAnalyzerRef.current = new VisemeAnalyzer(analyser, context.sampleRate);
     }
     await audioContextRef.current.resume();
     await audio.play();
@@ -317,15 +342,15 @@ function App() {
           <div className="intro-row"><div><p className="eyebrow">OPEN-SOURCE VRM STUDY · 2026</p><h1>Choose your<br /><em>digital presence.</em></h1></div><div className="intro-note"><span className="rule" />Actual VRM characters.<br />Audio-aware expressions.</div></div>
 
           <div className="stage-grid">
-            <div className="stage-wrap"><div className="stage-meta"><span><Aperture size={14} /> STAGE / {selected.signal}</span><span className="mono">{selected.badge} SIGNAL</span></div><div className="stage" style={{ backgroundImage: `linear-gradient(180deg, rgba(23,22,21,.12), rgba(23,22,21,.58)), url('${stageBackground}')` }}><VrmStage avatar={selected} motion={motion} mouthOpen={mouthOpen} onStatus={setModelStatus} />{modelStatus !== "ready" && <div className="stage-state" role="status"><span className="stage-state-pulse" />{modelStatus === "loading" ? "LOADING VRM" : "MODEL ERROR"}</div>}<div className="model-source-card"><div className="vrm-glyph">VRM</div><div><span className="eyebrow">ACTUAL MODEL</span><strong>{selected.name}</strong><small>{selected.license}</small></div></div><div className="status-rail"><span className={modelStatus === "ready" ? "status-ready" : ""}><i /> {statusLabel}</span><span>{mouthOpen.current > 0.08 ? "SPEAKING" : "LISTENING"}</span><span>WEBGL 2</span></div><div className="stage-corner top-left" /><div className="stage-corner bottom-right" /><div className="stage-coordinate">{selected.sourceUrl.replace("https://", "").slice(0, 29)}</div></div><div className="stage-controls"><button onClick={() => changeAvatar(-1)} aria-label="الافتار السابق"><ChevronLeft size={18} /></button><div><span className="mono">0{selectedIndex + 1} / 0{vrmAvatars.length}</span><strong>{selected.name}</strong></div><button onClick={() => changeAvatar(1)} aria-label="الافتار التالي"><ChevronRight size={18} /></button></div></div>
-            <aside className="info-panel"><div className="panel-kicker"><span className="signal-line" /> CURRENT VRM <span className="status-chip"><i /> {statusLabel}</span></div><div className="subject-name"><span>{selected.signal}</span><h2>{selected.name}</h2><p>{selected.role}</p></div><p className="descriptor">{selected.descriptor}</p><div className="stats"><div><span>FORMAT</span><strong>VRM 0 / GLTF</strong></div><div><span>LICENSE</span><strong>{selected.license}</strong></div><div><span>LIP-SYNC</span><strong>RMS · AA / OH</strong></div><div><span>STATUS</span><strong className="ready"><Check size={13} /> {statusLabel}</strong></div></div><button className="switch-button" onClick={() => setSettingsOpen(true)}>Configure presence <ArrowUpRight size={16} /></button><div className="panel-footer"><Gauge size={14} /> 60 FPS TARGET <span>·</span> VRM EXPRESSION MANAGER</div></aside>
+            <div className="stage-wrap"><div className="stage-meta"><span><Aperture size={14} /> STAGE / {selected.signal}</span><span className="mono">{selected.badge} SIGNAL</span></div><div className="stage" style={{ backgroundImage: `linear-gradient(180deg, rgba(23,22,21,.12), rgba(23,22,21,.58)), url('${stageBackground}')` }}><VrmStage avatar={selected} motion={motion} mouthOpen={mouthOpen} visemeRef={visemeRef} onStatus={setModelStatus} />{modelStatus !== "ready" && <div className="stage-state" role="status"><span className="stage-state-pulse" />{modelStatus === "loading" ? "LOADING VRM" : "MODEL ERROR"}</div>}<div className="model-source-card"><div className="vrm-glyph">VRM</div><div><span className="eyebrow">ACTUAL MODEL</span><strong>{selected.name}</strong><small>{selected.license}</small></div></div><div className="status-rail"><span className={modelStatus === "ready" ? "status-ready" : ""}><i /> {statusLabel}</span><span>{mouthOpen.current > 0.08 ? "SPEAKING" : "LISTENING"}</span><span>WEBGL 2</span></div><div className="stage-corner top-left" /><div className="stage-corner bottom-right" /><div className="stage-coordinate">{selected.sourceUrl.replace("https://", "").slice(0, 29)}</div></div><div className="stage-controls"><button onClick={() => changeAvatar(-1)} aria-label="الافتار السابق"><ChevronLeft size={18} /></button><div><span className="mono">0{selectedIndex + 1} / 0{vrmAvatars.length}</span><strong>{selected.name}</strong></div><button onClick={() => changeAvatar(1)} aria-label="الافتار التالي"><ChevronRight size={18} /></button></div></div>
+            <aside className="info-panel"><div className="panel-kicker"><span className="signal-line" /> CURRENT VRM <span className="status-chip"><i /> {statusLabel}</span></div><div className="subject-name"><span>{selected.signal}</span><h2>{selected.name}</h2><p>{selected.role}</p></div><p className="descriptor">{selected.descriptor}</p><div className="stats"><div><span>FORMAT</span><strong>VRM 0 / GLTF</strong></div><div><span>LICENSE</span><strong>{selected.license}</strong></div><div><span>LIP-SYNC</span><strong>VISEME · 15 SHAPES</strong></div><div><span>STATUS</span><strong className="ready"><Check size={13} /> {statusLabel}</strong></div></div><button className="switch-button" onClick={() => setSettingsOpen(true)}>Configure presence <ArrowUpRight size={16} /></button><div className="panel-footer"><Gauge size={14} /> 60 FPS TARGET <span>·</span> VRM EXPRESSION MANAGER</div></aside>
           </div>
 
           <div className="collection-strip"><div className="strip-title"><span className="eyebrow">VRM COLLECTION INDEX / 003</span><strong>Real characters, not portraits.</strong><div className="archive-ticks"><i /><i /><i /><i /><i /><i /><i /></div></div><div className="avatar-tabs">{vrmAvatars.map((avatar) => <button key={avatar.id} className={avatar.id === selected.id ? "avatar-tab active" : "avatar-tab"} onClick={() => { setSelectedId(avatar.id); setModelStatus("loading"); }}><span className="tab-number">{avatar.signal}</span><span><strong>{avatar.name}</strong><small>{avatar.role}</small></span><span className="tab-swatch" style={{ background: avatar.accent }} /></button>)}</div></div>
         </section>
       </div>
 
-      {settingsOpen && <div className="settings-backdrop" onClick={() => setSettingsOpen(false)}><aside className="settings-drawer" role="dialog" aria-modal="true" aria-labelledby="presence-settings-title" onClick={(event) => event.stopPropagation()}><div className="drawer-head"><div><span className="eyebrow">CONTROL ROOM</span><h2 id="presence-settings-title">Presence settings</h2></div><button className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="إغلاق الإعدادات"><X size={18} /></button></div><p className="drawer-copy">Switch the actual VRM character, then feed a voice clip to the expression manager.</p><div className="drawer-section"><span className="drawer-label">ACTUAL VRM AVATAR</span>{vrmAvatars.map((avatar) => <button key={avatar.id} className={avatar.id === selected.id ? "drawer-avatar selected" : "drawer-avatar"} onClick={() => { setSelectedId(avatar.id); setModelStatus("loading"); }}><span className="drawer-index">{avatar.signal}</span><span><strong>{avatar.name}</strong><small>{avatar.role} · {avatar.license}</small></span>{avatar.id === selected.id && <Check size={16} />}</button>)}</div><div className="drawer-section voice-section"><span className="drawer-label">LIP-SYNC INPUT</span><label className="audio-picker"><Volume2 size={16} /><span><strong>{audioName}</strong><small>Choose a WAV, MP3, or WebM voice clip</small></span><input type="file" accept="audio/*" onChange={onVoiceFile} /></label>{audioUrl && <div className="audio-controls"><audio ref={audioRef} src={audioUrl} controls onEnded={() => { mouthOpen.current = 0; }} /><button className="primary-audio-button" onClick={prepareAudio}>Play + sync lips</button></div>}<p className="drawer-hint">Mouth openness is driven from the playing audio RMS and mapped to the VRM AA/OH expressions.</p></div><div className="drawer-section"><span className="drawer-label">MOTION PROFILE</span><button className="toggle-row" onClick={() => setMotion((value) => !value)}><span><strong>Ambient movement</strong><small>Idle drift and auto-rotation</small></span><span className={motion ? "toggle on" : "toggle"}><i /></span></button></div><div className="drawer-section"><span className="drawer-label">SESSION</span><button className="reset-button" onClick={resetSession}><RotateCcw size={15} /> Reset to Rose baseline</button></div><div className="drawer-note"><Sparkles size={15} /> Models are loaded from the CC0 Open Source Avatars catalog. No raw portrait images are used in the stage.</div></aside></div>}
+      {settingsOpen && <div className="settings-backdrop" onClick={() => setSettingsOpen(false)}><aside className="settings-drawer" role="dialog" aria-modal="true" aria-labelledby="presence-settings-title" onClick={(event) => event.stopPropagation()}><div className="drawer-head"><div><span className="eyebrow">CONTROL ROOM</span><h2 id="presence-settings-title">Presence settings</h2></div><button className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="إغلاق الإعدادات"><X size={18} /></button></div><p className="drawer-copy">Switch the actual VRM character, then feed a voice clip to the expression manager.</p><div className="drawer-section"><span className="drawer-label">ACTUAL VRM AVATAR</span>{vrmAvatars.map((avatar) => <button key={avatar.id} className={avatar.id === selected.id ? "drawer-avatar selected" : "drawer-avatar"} onClick={() => { setSelectedId(avatar.id); setModelStatus("loading"); }}><span className="drawer-index">{avatar.signal}</span><span><strong>{avatar.name}</strong><small>{avatar.role} · {avatar.license}</small></span>{avatar.id === selected.id && <Check size={16} />}</button>)}</div><div className="drawer-section voice-section"><span className="drawer-label">LIP-SYNC INPUT</span><label className="audio-picker"><Volume2 size={16} /><span><strong>{audioName}</strong><small>Choose a WAV, MP3, or WebM voice clip</small></span><input type="file" accept="audio/*" onChange={onVoiceFile} /></label>{audioUrl && <div className="audio-controls"><audio ref={audioRef} src={audioUrl} controls onEnded={() => { mouthOpen.current = 0; visemeAnalyzerRef.current?.reset(); }} /><button className="primary-audio-button" onClick={prepareAudio}>Play + sync lips</button></div>}<p className="drawer-hint">Speech is classified into smoothed visemes and mapped to 15 mouth cues, with RMS fallback for uncertain frames.</p></div><div className="drawer-section"><span className="drawer-label">MOTION PROFILE</span><button className="toggle-row" onClick={() => setMotion((value) => !value)}><span><strong>Ambient movement</strong><small>Idle drift and auto-rotation</small></span><span className={motion ? "toggle on" : "toggle"}><i /></span></button></div><div className="drawer-section"><span className="drawer-label">SESSION</span><button className="reset-button" onClick={resetSession}><RotateCcw size={15} /> Reset to Rose baseline</button></div><div className="drawer-note"><Sparkles size={15} /> Models are loaded from the CC0 Open Source Avatars catalog. No raw portrait images are used in the stage.</div></aside></div>}
     </main>
   );
 }
