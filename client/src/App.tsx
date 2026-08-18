@@ -78,6 +78,25 @@ const avatars: AvatarDefinition[] = [
   },
 ];
 
+function readStoredAvatar(): AvatarId {
+  if (typeof window === "undefined") return "nova";
+  try {
+    const value = window.localStorage.getItem("alish02-avatar");
+    return avatars.some((avatar) => avatar.id === value) ? (value as AvatarId) : "nova";
+  } catch {
+    return "nova";
+  }
+}
+
+function readStoredMotion(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem("alish02-motion") !== "off";
+  } catch {
+    return true;
+  }
+}
+
 function AvatarModel({ avatar, motion }: { avatar: AvatarDefinition; motion: boolean }) {
   const group = useRef<Group>(null);
   const visor = useRef<Mesh>(null);
@@ -174,9 +193,9 @@ function AvatarStage({ avatar, motion }: { avatar: AvatarDefinition; motion: boo
 }
 
 function App() {
-  const [activeId, setActiveId] = useState<AvatarId>(() => (localStorage.getItem("alish02-avatar") as AvatarId) || "nova");
+  const [activeId, setActiveId] = useState<AvatarId>(readStoredAvatar);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [motion, setMotion] = useState(() => localStorage.getItem("alish02-motion") !== "off");
+  const [motion, setMotion] = useState(readStoredMotion);
   const [dark, setDark] = useState(true);
   const active = useMemo(() => avatars.find((avatar) => avatar.id === activeId) ?? avatars[0], [activeId]);
   const activeIndex = avatars.findIndex((avatar) => avatar.id === active.id);
@@ -185,11 +204,32 @@ function App() {
   const stageBackground = pagesBase === "/" ? "/manus-storage/alish02-observatory-bg_c2146f3f.jpg" : `${pagesBase}observatory-bg.svg`;
 
   useEffect(() => {
-    localStorage.setItem("alish02-avatar", activeId);
+    try {
+      window.localStorage.setItem("alish02-avatar", activeId);
+    } catch {
+      // The UI remains usable when browser storage is disabled.
+    }
   }, [activeId]);
   useEffect(() => {
-    localStorage.setItem("alish02-motion", motion ? "on" : "off");
+    try {
+      window.localStorage.setItem("alish02-motion", motion ? "on" : "off");
+    } catch {
+      // The motion toggle remains an in-memory preference for this session.
+    }
   }, [motion]);
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSettingsOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [settingsOpen]);
 
   const changeAvatar = (direction: number) => {
     const next = (activeIndex + direction + avatars.length) % avatars.length;
@@ -209,8 +249,8 @@ function App() {
 
       <div className="layout">
         <aside className="rail">
-          <div className="rail-top"><button className="icon-button"><Menu size={18} /></button><span className="vertical-label">ARCHIVE / 03</span></div>
-          <div className="rail-bottom"><button className="icon-button" onClick={() => setDark((value) => !value)} aria-label="تبديل السمة">{dark ? <Sun size={17} /> : <Moon size={17} />}</button><button className="icon-button"><CircleHelp size={17} /></button></div>
+          <div className="rail-top"><button className="icon-button" aria-label="فتح قائمة الأرشيف"><Menu size={18} /></button><span className="vertical-label">ARCHIVE / 03</span></div>
+          <div className="rail-bottom"><button className="icon-button" onClick={() => setDark((value) => !value)} aria-label="تبديل السمة">{dark ? <Sun size={17} /> : <Moon size={17} />}</button><button className="icon-button" aria-label="مساعدة alish02"><CircleHelp size={17} /></button></div>
         </aside>
 
         <section className="content">
@@ -233,7 +273,7 @@ function App() {
         </section>
       </div>
 
-      {settingsOpen && <div className="settings-backdrop" onClick={() => setSettingsOpen(false)}><aside className="settings-drawer" onClick={(event) => event.stopPropagation()}><div className="drawer-head"><div><span className="eyebrow">CONTROL ROOM</span><h2>Presence settings</h2></div><button className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="إغلاق الإعدادات"><X size={18} /></button></div><p className="drawer-copy">Your selection stays in this browser. Choose a subject, then return to the observatory.</p><div className="drawer-section"><span className="drawer-label">AVATAR SUBJECT</span>{avatars.map((avatar) => <button key={avatar.id} className={avatar.id === active.id ? "drawer-avatar selected" : "drawer-avatar"} onClick={() => setActiveId(avatar.id)}><span className="drawer-index">{avatar.signal}</span><span><strong>{avatar.name}</strong><small>{avatar.role}</small></span>{avatar.id === active.id && <Check size={16} />}</button>)}</div><div className="drawer-section"><span className="drawer-label">MOTION PROFILE</span><button className="toggle-row" onClick={() => setMotion((value) => !value)}><span><strong>Ambient movement</strong><small>Idle drift and auto-rotation</small></span><span className={motion ? "toggle on" : "toggle"}><i /></span></button></div><div className="drawer-section"><span className="drawer-label">SESSION</span><button className="reset-button" onClick={() => { setActiveId("nova"); setMotion(true); }}><RotateCcw size={15} /> Reset to Nova baseline</button></div><div className="drawer-note"><Sparkles size={15} /> VRM loading is the next expansion point. This build uses lightweight procedural characters so GitHub Pages remains fast and dependable.</div></aside></div>}
+      {settingsOpen && <div className="settings-backdrop" onClick={() => setSettingsOpen(false)}><aside className="settings-drawer" role="dialog" aria-modal="true" aria-labelledby="presence-settings-title" onClick={(event) => event.stopPropagation()}><div className="drawer-head"><div><span className="eyebrow">CONTROL ROOM</span><h2 id="presence-settings-title">Presence settings</h2></div><button className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="إغلاق الإعدادات"><X size={18} /></button></div><p className="drawer-copy">Your selection stays in this browser. Choose a subject, then return to the observatory.</p><div className="drawer-section"><span className="drawer-label">AVATAR SUBJECT</span>{avatars.map((avatar) => <button key={avatar.id} className={avatar.id === active.id ? "drawer-avatar selected" : "drawer-avatar"} onClick={() => setActiveId(avatar.id)}><span className="drawer-index">{avatar.signal}</span><span><strong>{avatar.name}</strong><small>{avatar.role}</small></span>{avatar.id === active.id && <Check size={16} />}</button>)}</div><div className="drawer-section"><span className="drawer-label">MOTION PROFILE</span><button className="toggle-row" onClick={() => setMotion((value) => !value)}><span><strong>Ambient movement</strong><small>Idle drift and auto-rotation</small></span><span className={motion ? "toggle on" : "toggle"}><i /></span></button></div><div className="drawer-section"><span className="drawer-label">SESSION</span><button className="reset-button" onClick={() => { setActiveId("nova"); setMotion(true); }}><RotateCcw size={15} /> Reset to Nova baseline</button></div><div className="drawer-note"><Sparkles size={15} /> VRM loading is the next expansion point. This build uses lightweight procedural characters so GitHub Pages remains fast and dependable.</div></aside></div>}
     </main>
   );
 }
