@@ -41,7 +41,7 @@ type VrmAvatarDefinition = {
   license: string;
 };
 
-const runtimeModelUrl = (localPath: string, publicUrl: string) => import.meta.env.BASE_URL === "/" ? localPath : publicUrl;
+const runtimeModelUrl = (localPath: string) => `${import.meta.env.BASE_URL}${localPath.replace(/^\//, "")}`;
 
 const vrmAvatars: VrmAvatarDefinition[] = [
   {
@@ -52,7 +52,7 @@ const vrmAvatars: VrmAvatarDefinition[] = [
     signal: "VRM-057",
     accent: "#ef9fca",
     badge: "ROSE",
-    modelUrl: runtimeModelUrl("/manus-storage/rose_93bab3dc.vrm", "https://github.com/magen-gillan/alish02/releases/download/v0.3.1/rose.vrm"),
+    modelUrl: runtimeModelUrl("models/rose.vrm"),
     sourceUrl: "https://github.com/toxsam/open-source-avatars",
     license: "CC0 · 100Avatars R1",
   },
@@ -64,7 +64,7 @@ const vrmAvatars: VrmAvatarDefinition[] = [
     signal: "VRM-070",
     accent: "#86c8c4",
     badge: "MINT",
-    modelUrl: runtimeModelUrl("/manus-storage/robert_9e232648.vrm", "https://github.com/magen-gillan/alish02/releases/download/v0.3.1/robert.vrm"),
+    modelUrl: runtimeModelUrl("models/robert.vrm"),
     sourceUrl: "https://github.com/toxsam/open-source-avatars",
     license: "CC0 · 100Avatars R1",
   },
@@ -76,7 +76,7 @@ const vrmAvatars: VrmAvatarDefinition[] = [
     signal: "VRM-059",
     accent: "#b6a5ff",
     badge: "VIOLET",
-    modelUrl: runtimeModelUrl("/manus-storage/rabbit_7383b0ff.vrm", "https://github.com/magen-gillan/alish02/releases/download/v0.3.1/rabbit.vrm"),
+    modelUrl: runtimeModelUrl("models/rabbit.vrm"),
     sourceUrl: "https://github.com/toxsam/open-source-avatars",
     license: "CC0 · 100Avatars R1",
   },

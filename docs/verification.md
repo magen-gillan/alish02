@@ -44,3 +44,7 @@
 اختبار الرابط العام بعد النشر: HTML وJavaScript وملفات CSS من GitHub Pages تعيد HTTP 200. ملف Rose من Arweave يعيد HTTP 200 لكنه استغرق نحو 18 ثانية وظل runtime في حالة `LOADING` أثناء نافذة الاختبار؛ لا توجد أخطاء console. هذا يؤكد أن القيد الحالي هو زمن/موثوقية CDN الخارجي، وليس فشل Workflow أو TypeScript.
 
 تم إنشاء GitHub Release `v0.3.1` للأصول العامة `rose.vrm` و`robert.vrm` و`rabbit.vrm`، وتراوحت استجابة التنزيل المباشر بين 0.19 و0.29 ثانية في الفحص المحلي. سيستخدم GitHub Pages هذه الروابط العامة بدل Arweave لتقليل زمن بقاء المسرح في LOADING.
+
+بعد نشر commit `94f0cf9`، ظهرت نسخة GitHub Pages الجديدة وواجهة `VISEME · 15 SHAPES`. بقي Rose في `LOADING`، ولم يظهر مورد release في `performance.getEntriesByType('resource')` أثناء الفحص، مع عدم وجود console errors. يلزم اختبار URL النهائي مباشرة من المتصفح أو إضافة logging لفشل GLTFLoader قبل اعتماد النشر العام.
+
+الحل النهائي لمشكلة `LOADING`: روابط GitHub Release تعيد توجيهًا إلى `release-assets.githubusercontent.com` دون `Access-Control-Allow-Origin`، لذلك لا يمكن لـ `GLTFLoader` طلبها من GitHub Pages. نُقلت النسخ المرخصة نفسها إلى `client/public/models/` داخل حزمة Pages، وأصبحت المسارات `/alish02/models/{rose,robert,rabbit}.vrm` same-origin. نجح `pnpm check` و`pnpm build` بعد التعديل.
