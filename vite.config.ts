@@ -220,6 +220,14 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "three-runtime": ["three", "@react-three/fiber", "@react-three/drei"],
+          "vrm-runtime": ["@pixiv/three-vrm"],
+        },
+      },
+    },
   },
   server: {
     port: 3000,
